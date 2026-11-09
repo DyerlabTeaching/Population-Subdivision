@@ -1,29 +1,169 @@
 ---
-title: "Topic Homework"
+title: "Population Subdivision Homework"
 author: "YOUR NAME HERE"
-format: 
-  html:
-    toc: false
-    code-tools: true 
+format: dyerlab-html
 ---
 
-## Homework
+## The Idea
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+One of the central habits of reproducible research is that the **words and the code that produce them are written together**. A paragraph of *Methods* is followed immediately by the chunk that carries out what it describes. A statement in *Results* is backed by a value generated in the chunk beside it, and for numbers reported in the running text the value is read straight from a variable in memory using an inline `` `r ` `` expression, never typed by hand.
 
-## Running Code
+For a model, the *Methods* are the model itself: which populations exist, how they are connected, at what rates, and where they start. In this homework you will simulate allele frequencies on a network of populations using the general model of gene flow,[^general] find the frequency the network settles on and how long it takes to get there, and explain which populations determine that outcome. Read the worked example, which does this for three populations in a line, then reproduce its structure for the five-population network below.
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## A Worked Example
+
+Three populations, *x*, *y*, and *z*, sit in a line along a stream, so that *y* exchanges migrants with both of its neighbors but *x* and *z* exchange none directly: a short stepping-stone arrangement.
+
+### Methods
+
+> **Model.** We modeled three populations arranged in a line, with symmetric gene flow between neighbors at $m_{x \leftrightarrow y} = 0.03$ and $m_{y \leftrightarrow z} = 0.06$ and none between *x* and *z*. Starting allele frequencies were $p_x = 0.8$, $p_y = 0.2$, and $p_z = 0.5$. Each generation, the frequency in each population was updated as the mixture of its residents and its immigrants under the general model, and we followed the system for 300 generations.
 
 ```{r}
-1 + 1
+#| message: false
+library( ggplot2 )
+T <- 300
+mXY <- 0.03
+mYZ <- 0.06
+
+pX <- rep( NA, T + 1 )
+pY <- rep( NA, T + 1 )
+pZ <- rep( NA, T + 1 )
+pX[1] <- 0.8
+pY[1] <- 0.2
+pZ[1] <- 0.5
+
+for( gen in 2:(T + 1) ) {
+  pX[gen] <- mXY * pY[gen - 1] + (1 - mXY) * pX[gen - 1]
+  pY[gen] <- mXY * pX[gen - 1] + mYZ * pZ[gen - 1] + (1 - (mXY + mYZ)) * pY[gen - 1]
+  pZ[gen] <- mYZ * pY[gen - 1] + (1 - mYZ) * pZ[gen - 1]
+}
 ```
 
-You can add options to executable code like this
+> **Equilibrium.** We took the frequency in the final generation as the equilibrium, and recorded the first generation at which every population was within 0.01 of it.
 
 ```{r}
-#| echo: false
-2 * 2
+p_eq <- pZ[T + 1]
+max_diff <- pmax( abs( pX - p_eq ), abs( pY - p_eq ), abs( pZ - p_eq ) )
+gen_eq <- min( (0:T)[ max_diff < 0.01 ] )
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+### Preparing the reporting values
+
+Before writing a word of the Results, pull the numbers you are going to report out of the simulation and format them. Doing that work in one small chunk, and giving each value a short name, keeps the writing clean.
+
+```{r}
+eq_value <- format( p_eq, digits = 3 )
+start_mean <- format( mean( c( pX[1], pY[1], pZ[1] ) ), digits = 3 )
+eq_gens <- gen_eq
+```
+
+### Results
+
+> All three populations converged on an allele frequency of `r eq_value`, the average of their starting frequencies (`r start_mean`), as expected for symmetric gene flow. Every population was within 0.01 of this equilibrium by generation `r eq_gens`. Population *x* was the slowest to arrive, because it exchanges migrants only with *y*, and at the lower of the two rates.
+
+```{r}
+df <- data.frame( Generation = rep( 0:T, times = 3 ),
+                  Frequency = c( pX, pY, pZ ),
+                  Population = rep( c( "x", "y", "z" ), each = T + 1 ) )
+
+ggplot( df, aes( x = Generation, y = Frequency, color = Population ) ) +
+  geom_line() +
+  ylab( "Allele frequency" ) +
+  theme_minimal()
+```
+
+Now the source of that paragraph reads almost exactly as the rendered sentence will, and if the model changes you edit only the chunks above, never the prose.
+
+Here is the raw text that produced it:
+
+```{verbatim}
+All three populations converged on an allele frequency of `r eq_value`, the average of their starting frequencies (`r start_mean`), as expected for symmetric gene flow. Every population was within 0.01 of this equilibrium by generation `r eq_gens`. Population *x* was the slowest to arrive, because it exchanges migrants only with *y*, and at the lower of the two rates.
+```
+
+## Your Assignment
+
+Five populations are connected as shown below. Populations *x* and *y* exchange migrants symmetrically, and every other connection is **one-way**: *x* and *y* each send migrants to *z*, *z* sends migrants to *w*, and *w* sends migrants to *u*.
+
+```{dot}
+//| fig-alt: "Five populations: x and y exchange migrants in both directions; x and y each send migrants one way to z; z sends one way to w; and w sends one way to u."
+digraph net {
+  graph [layout=neato, bgcolor="transparent"];
+  node  [shape=circle, style=filled, fillcolor="#e0e0e0", color="#999999", fontname="Helvetica", fontsize=14, width=0.55, fixedsize=true];
+  edge  [arrowsize=0.7, color="#333333", fontname="Helvetica", fontsize=11];
+  x [pos="0,2!"]; y [pos="2,2!"]; z [pos="1,1!"]; w [pos="1,0!"]; u [pos="2.2,0!"];
+  x -> y [dir=both, label="0.05"];
+  x -> z [label="0.02"];
+  y -> z [label="0.04"];
+  z -> w [label="0.03"];
+  w -> u [label="0.10"];
+}
+```
+
+| Connection | Rate |
+|---|---|
+| $m_{x \leftrightarrow y}$ | 0.05 |
+| $m_{x \rightarrow z}$ | 0.02 |
+| $m_{y \rightarrow z}$ | 0.04 |
+| $m_{z \rightarrow w}$ | 0.03 |
+| $m_{w \rightarrow u}$ | 0.10 |
+
+The starting allele frequencies are $p_x = 0.9$, $p_y = 0.3$, $p_z = 0.1$, $p_w = 0.5$, and $p_u = 0.0$.
+
+Following the worked example, produce a standalone **Methods** and **Results** write-up that simulates this network and reports where it ends up and how long it takes.
+
+Your document should have:
+
+1. **Methods** — a *Model* paragraph describing the five populations, their connections and rates (say which are one-way), and their starting frequencies, followed by the chunk that sets up and runs the simulation for 500 generations. Write the update equation for each population first, on paper: a population's immigrants come only from the populations with arrows pointing *into* it, and its residents are everything that is not an immigrant.[^matrix] An *Equilibrium* paragraph followed by the chunk that finds the equilibrium frequency and the first generation at which every population is within 0.01 of it.[^equilibrium]
+2. **A reporting-values chunk** — `format()` the equilibrium frequency, the average of the five starting frequencies, and the generation at which the network reached equilibrium, giving each a short name.
+3. **Results** — one paragraph reporting the equilibrium, how it compares with the average of the starting frequencies, and when the network reached it, with every number as a bare inline value (`` `r knitr::inline_expr("eq_value")` ``) and no `format()` in the prose. Follow it with a plot of all five allele frequencies through time.
+
+Then answer briefly, a sentence or two each:
+
+- The network does not settle on the average of the five starting frequencies. Which populations determine where it ends up, and why those?
+- If $m_{w \rightarrow u}$ were doubled to 0.20, would the equilibrium change? Would the time for *u* to reach it change much? Which rate limits how quickly *u* gets there?
+
+[^general]: See [The General Model](https://dyerlabteaching.github.io/PopulationSubdivision/narrative.html#sec-general-model) in the narrative, and [The General Model in R](https://dyerlabteaching.github.io/PopulationSubdivision/narrative.html#sec-general-model-r) for the simulation.
+[^matrix]: The [migration matrix](https://dyerlabteaching.github.io/PopulationSubdivision/narrative.html#the-migration-matrix) is a compact way to write all five equations; either the loop or the matrix is fine.
+[^equilibrium]: See [How Long Until Equilibrium?](https://dyerlabteaching.github.io/PopulationSubdivision/narrative.html#how-long-until-equilibrium) in the narrative.
+
+## What You Turn In
+
+**One file: the rendered, self-contained `.html`.** Not the `.qmd`, and not a copy of this page. Make a *new* Quarto document that contains only your own work — your Methods and Results sections with their chunks, the reporting-values chunk, your plot, and your brief answers to the two questions.
+
+The worked example above is a model to imitate, not text to paste into your document.
+
+### Making the document
+
+1. In RStudio: **File ▸ New File ▸ Quarto Document…**
+2. In the dialog, enter a title and your name, leave the engine set to **Knitr**, and click **Create**.
+3. Delete everything RStudio puts below the header (the "Quarto" boilerplate and its example chunk).
+4. Replace the header it generated with the one below.
+5. Save the file into your course project folder as `Population-Subdivision-Homework.qmd`.
+6. Write your content, then click **Render** to produce the `.html`. That HTML file is what you submit.
+
+### The full YAML header
+
+```yaml
+---
+title: "Population Subdivision Homework"
+author: "Your Name"
+date: today
+abstract: |
+  A sentence or two saying what the document does: the data, the question, and what you found.
+format:
+  html:
+    self-contained: true
+    code-tools: true
+---
+```
+
+- **`title` / `author` / `date` / `abstract`** — complete front matter, including a short summary where a scientific paper would put its abstract. `date: today` fills itself in at render time.
+- **`format: html`** — render to a single web page I can open in any browser.
+- **`self-contained: true`** — bundle every image, style, and script *into* that one `.html` file. Without it the file depends on a sibling `*_files/` folder that never makes it into the upload, and your figures and formatting arrive broken.
+- **`code-tools: true`** — adds the "</> Code" button in the top-right that lets a reader view the full source. **This is not optional.** If I cannot see the code behind a wrong answer, I cannot tell whether you were one typo away or lost the plot entirely — which means I cannot give partial credit, point out where it went sideways, or help you fix it. A rendered page with no visible code is graded only on what rendered.
+
+Use this same header layout for every document you turn in this course.
+
+## How This Is Graded
+
+This assignment is scored with the **Online Homework Rubric** on the Canvas site — the same rubric used for every online homework in this course. It covers online access to the published document, front matter, formatting, and whether the document stands on its own; the remaining points come from the assignment-specific work above.

@@ -1,108 +1,80 @@
 ---
-title: "Subdivision In-Class Activity"
-format: 
-  html:
-    code-tools: true
-    self-contained: true
-editor: source
+title: "In Class Activity - Population Subdivision"
+author: "YOUR NAME HERE"
+abstract: "This activity uses the general model of gene flow to follow allele frequencies through time in a small network of populations, and asks how changes to the network change where they end up."
+format: dyerlab-html
 ---
 
-Population subdivision creates more realistic situations, where individuals in spatial proximity are more likely to mate with each other compared to individuals in different locales.  You will see a lot of terminology here, including population, deme, locale, subdivision, etc., all of which mean that one or more factors are challenging the fundamental assumption of random mating.  With subdivided populations, each individual's probability of mating depends upon which subdivision they reside in. This is mediated by connectivity, or gene flow (and migration if it is followed by mating).
+Population subdivision creates more realistic situations, in which individuals that are close together are more likely to mate with each other than with individuals in other locales.  You will see a lot of terminology for this (population, deme, locale, subdivision), all of which describe one or more factors that break the fundamental assumption of random mating.  In a subdivided population, an individual's probability of mating depends on which subdivision it lives in, and the subdivisions are connected by gene flow.
 
-In this quick section, we are going to focus on:
+In this activity we focus on:
 
-1.  Understanding how migration rates and population connectivity impact allele frequencies.
-
-2.  Predict future allele frequencies.
-
-3.  Communicate those findings.
+1. Understanding how migration rates and population connectivity affect allele frequencies,
+2. Predicting future allele frequencies, and
+3. Communicating those findings.
 
 ## Population Connectivity
 
 Consider the following connectivity graph of the three populations *x*, *y*, and *z*.
 
-![](https://www.flickr.com/photo_download.gne?id=54918100312&secret=26265c0455&size=c&source=photoPageEngagement)
+![](media/general_model.png){fig-alt="Three populations, x, y, and z, joined pairwise by two-headed arrows labeled m sub x y, m sub x z, and m sub y z."}
 
-If the population start off with these frequencies.
+The populations start with these allele frequencies and exchange migrants at these rates.
 
 ```{r}
+#| message: false
 library( tidyverse )
 px <- 0.2
 py <- 0.8
 pz <- 0.9
-mxy <- 0.1 
+mxy <- 0.1
 mxz <- 0.2
 myz <- 0.3
 ```
 
-Estimate allele frequencies until equilibrium.
+We will follow them for 100 generations, so set up a `data.frame` with one row per generation and the starting frequencies in the first row.
 
 ```{r}
 N <- 100
 
-data.frame( T = seq(0,N),
-            px = c(px,rep(NA,N)),
-            py = c(py,rep(NA,N)),
-            pz = c(pz,rep(NA,N))) -> df
-head(df)
+df <- data.frame( Generation = seq( 0, N ),
+                  px = c( px, rep( NA, N ) ),
+                  py = c( py, rep( NA, N ) ),
+                  pz = c( pz, rep( NA, N ) ) )
+head( df )
 ```
 
-```{r}
+Each generation, every population is a mixture of its residents and the immigrants from the populations it is connected to (see [The General Model](https://dyerlabteaching.github.io/PopulationSubdivision/narrative.html#sec-general-model) in the narrative).
 
-for( i in 2:N) { 
-  
-  df$px[i] <- df$px[(i-1)]*(1 - (mxy+mxz)) +  df$py[(i-1)] * mxy + df$pz[(i-1)] * mxz 
-  df$py[i] <- df$py[(i-1)]*(1 - (mxy+myz)) +  df$px[(i-1)] * mxy + df$pz[(i-1)] * myz 
-  df$pz[i] <- df$pz[(i-1)]*(1 - (mxz+myz)) +  df$px[(i-1)] * mxz + df$py[(i-1)] * myz 
-  
-  
+```{r}
+for( i in 2:nrow( df ) ) {
+  df$px[i] <- df$px[i - 1] * (1 - (mxy + mxz)) + df$py[i - 1] * mxy + df$pz[i - 1] * mxz
+  df$py[i] <- df$py[i - 1] * (1 - (mxy + myz)) + df$px[i - 1] * mxy + df$pz[i - 1] * myz
+  df$pz[i] <- df$pz[i - 1] * (1 - (mxz + myz)) + df$px[i - 1] * mxz + df$py[i - 1] * myz
 }
-
-
-
-
-
 ```
-
 
 ```{r}
-# plot the outcome
-library( tidyverse )
-
-#ggplot( df ) + 
-#  geom_line( aes(T, px), col="red") + 
-#  geom_line( aes(T, py), col="blue") + 
-#  geom_line( aes(T, pz), col="green") +
-#  theme_minimal()
-
-pivot_longer( df, cols = c(px,py,pz) ) |>
-  ggplot( aes(T,value, color=name) ) +
-  geom_line() + 
+pivot_longer( df, cols = c( px, py, pz ), names_to = "Population", values_to = "Frequency" ) |>
+  ggplot( aes( Generation, Frequency, color = Population ) ) +
+  geom_line() +
   theme_minimal()
-
-
 ```
-
 
 ## Questions
 
-Use the code above and 
+Use the code above to answer the following.
 
-1. What if $m_{y \leftrightarrow z}=0$, how does that change the trajectory in allele frequencies?
-
-```{r}
-# set myz=0, redo, and plot the allele frequencies for each population
-```
-
-
-2. Reset the connectivity from the last question to the original one and add a fourth population (`w`) to the model that is connected in a **one-way migration** from population `z` with a rate of $m_{z \rightarrow w} = 0.05$ and a starting allele frequency of 0.1.  Create a plot of allele frequencies through time with a sufficient number of generations to allow the system to reach allele frequency equilibrium.
+1. What if $m_{y \leftrightarrow z} = 0$?  How does that change the trajectories of the allele frequencies, and where do they end up?
 
 ```{r}
-# add another population and plot allele frequencies.
+# set myz = 0, rerun the simulation, and plot the allele frequencies for each population
 ```
 
+2. Reset the connectivity to the original rates and add a fourth population, `w`, that receives migrants by **one-way** gene flow from population `z` at a rate of $m_{z \rightarrow w} = 0.05$, starting at an allele frequency of 0.1.  Plot the allele frequencies through time for enough generations that the whole system reaches equilibrium.
 
+```{r}
+# add population w and plot the allele frequencies
+```
 
-
-
-
+3. Where does `w` end up, and why there?  Does adding `w` change the allele frequencies of `x`, `y`, or `z`?

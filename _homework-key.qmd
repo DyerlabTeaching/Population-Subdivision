@@ -1,0 +1,74 @@
+---
+title: "Population Subdivision Homework - Key"
+author: "Rodney Dyer"
+format: dyerlab-html
+---
+
+## Methods
+
+**Model.** We modeled five populations connected by gene flow. Populations *x* and *y* exchanged migrants symmetrically at $m_{x \leftrightarrow y} = 0.05$. All other connections were one-way: *x* and *y* sent migrants to *z* at $m_{x \rightarrow z} = 0.02$ and $m_{y \rightarrow z} = 0.04$, *z* sent migrants to *w* at $m_{z \rightarrow w} = 0.03$, and *w* sent migrants to *u* at $m_{w \rightarrow u} = 0.10$. Starting allele frequencies were $p_x = 0.9$, $p_y = 0.3$, $p_z = 0.1$, $p_w = 0.5$, and $p_u = 0.0$. Each generation, the frequency in each population was updated as the mixture of its residents and the immigrants arriving from the populations connected *into* it, under the general model, and we followed the system for 500 generations.
+
+```{r}
+#| message: false
+library( ggplot2 )
+T <- 500
+mXY <- 0.05
+mXZ <- 0.02
+mYZ <- 0.04
+mZW <- 0.03
+mWU <- 0.10
+
+pX <- rep( NA, T + 1 )
+pY <- rep( NA, T + 1 )
+pZ <- rep( NA, T + 1 )
+pW <- rep( NA, T + 1 )
+pU <- rep( NA, T + 1 )
+pX[1] <- 0.9
+pY[1] <- 0.3
+pZ[1] <- 0.1
+pW[1] <- 0.5
+pU[1] <- 0.0
+
+for( gen in 2:(T + 1) ) {
+  pX[gen] <- mXY * pY[gen - 1] + (1 - mXY) * pX[gen - 1]
+  pY[gen] <- mXY * pX[gen - 1] + (1 - mXY) * pY[gen - 1]
+  pZ[gen] <- mXZ * pX[gen - 1] + mYZ * pY[gen - 1] + (1 - (mXZ + mYZ)) * pZ[gen - 1]
+  pW[gen] <- mZW * pZ[gen - 1] + (1 - mZW) * pW[gen - 1]
+  pU[gen] <- mWU * pW[gen - 1] + (1 - mWU) * pU[gen - 1]
+}
+```
+
+**Equilibrium.** We took the frequency of *u*, the last population in the chain, in the final generation as the equilibrium, and recorded the first generation at which every population was within 0.01 of it.
+
+```{r}
+p_eq <- pU[T + 1]
+max_diff <- pmax( abs( pX - p_eq ), abs( pY - p_eq ), abs( pZ - p_eq ),
+                  abs( pW - p_eq ), abs( pU - p_eq ) )
+gen_eq <- min( (0:T)[ max_diff < 0.01 ] )
+```
+
+```{r}
+eq_value <- format( p_eq, digits = 3 )
+start_mean <- format( mean( c( pX[1], pY[1], pZ[1], pW[1], pU[1] ) ), digits = 3 )
+eq_gens <- gen_eq
+```
+
+## Results
+
+All five populations converged on an allele frequency of `r eq_value`, well above the average of their starting frequencies (`r start_mean`). It is the average of the starting frequencies of *x* and *y* alone. Every population was within 0.01 of this equilibrium by generation `r eq_gens`; *x* and *y* reached it within a few dozen generations, and *u*, at the end of the chain of one-way connections, was the last to arrive.
+
+```{r}
+df <- data.frame( Generation = rep( 0:T, times = 5 ),
+                  Frequency = c( pX, pY, pZ, pW, pU ),
+                  Population = rep( c( "x", "y", "z", "w", "u" ), each = T + 1 ) )
+
+ggplot( df, aes( x = Generation, y = Frequency, color = Population ) ) +
+  geom_line() +
+  ylab( "Allele frequency" ) +
+  theme_minimal()
+```
+
+## Questions
+
+- *x* and *y* set the equilibrium. They exchange migrants only with each other and receive none from the rest of the network, so with symmetric gene flow they converge on the average of their own starting frequencies, $(0.9 + 0.3)/2 = 0.6$, regardless of *z*, *w*, and *u*. Every other population receives migrants, directly or through the chain, only from them, so like an island receiving migrants from a mainland, each one ends up at its sources' frequency. The starting frequencies of *z*, *w*, and *u* affect only how long it takes, not where they end up.
+- No, the equilibrium would not change, because it is set entirely by *x* and *y*. The time would change only a little (every population is within 0.01 by generation `r gen_eq` at $m_{w \rightarrow u} = 0.10$, and only a few generations sooner at 0.20). *u* can approach the equilibrium no faster than *w* does, and *w* is limited by the slowest link in the chain, $m_{z \rightarrow w} = 0.03$.

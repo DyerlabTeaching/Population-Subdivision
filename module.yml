@@ -1,0 +1,12 @@
+title: "Population Subdivision"
+repo: PopulationSubdivision
+image:
+  file: media/module_image.jpg
+  alt: "Looking down over green desert scrub and rocky ridges to the Sea of Cortez south of Loreto, Baja California, with a small rocky island and a distant larger one offshore."
+epigraph: >-
+  Few species mate at random across their whole range.  Once a population
+  is broken into pieces, each piece follows its own allele frequencies,
+  and gene flow is the thread that pulls them back together.
+resources:
+  - "Wright S (1931) [Evolution in Mendelian populations](https://doi.org/10.1093/genetics/16.2.97). *Genetics* 16: 97–159, which introduced the island model."
+  - "Kimura M & Weiss GH (1964) [The stepping stone model of population structure and the decrease of genetic correlation with distance](https://doi.org/10.1093/genetics/49.4.561). *Genetics* 49: 561–576."

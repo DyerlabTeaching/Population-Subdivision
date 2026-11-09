@@ -1,101 +1,98 @@
 ---
-title: "Subdivision In-Class Activity"
-format: 
-  html:
-    code-tools: true
-    self-contained: true
-editor: source
+title: "In Class Activity - Population Subdivision - Key"
+author: "Rodney Dyer"
+format: dyerlab-html
 ---
 
-Population subdivision creates more realistic situations, where individuals in spatial proximity are more likely to mate with each other compared to individuals in different locales.  You will see a lot of terminology here, including population, deme, locale, subdivision, etc., all of which mean that one or more factors are challenging the fundamental assumption of random mating.  With subdivided populations, each individual's probability of mating depends upon which subdivision they reside in. This is mediated by connectivity, or gene flow (and migration if it is followed by mating).
-
-In this quick section, we are going to focus on:
-
-1.  Understanding how migration rates and population connectivity impact allele frequencies.
-
-2.  Predict future allele frequencies.
-
-3.  Communicate those findings.
-
-## Population Connectivity
-
-Consider the following connectivity graph of the three populations *x*, *y*, and *z*.
-
-![](https://www.flickr.com/photo_download.gne?id=54918100312&secret=26265c0455&size=c&source=photoPageEngagement)
-
-If the population start off with these frequencies.
+## Setup
 
 ```{r}
+#| message: false
 library( tidyverse )
 px <- 0.2
 py <- 0.8
 pz <- 0.9
-mxy <- 0.1 
+mxy <- 0.1
 mxz <- 0.2
 myz <- 0.3
-```
-
-Estimate allele frequencies until equilibrium.
-
-```{r}
 N <- 100
-data.frame( t = seq(0,N),
-            px = c(px,rep(NA,N)),
-            py = c(py,rep(NA,N)),
-            pz = c(pz,rep(NA,N))) -> df
-head(df)
-```
 
-```{r}
-# run simulation
-for( i in 2:nrow(df) ) { 
-  df$px[i] <- df$px[(i-1)]*(1-(mxy + mxz) ) + df$py[(i-1)]*mxy + df$pz[(i-1)]*mxz
-  df$py[i] <- df$py[(i-1)]*(1-(mxy + myz) ) + df$px[(i-1)]*mxy + df$pz[(i-1)]*mxz
-  df$pz[i] <- df$pz[(i-1)]*(1-(myz + mxz) ) + df$py[(i-1)]*myz + df$pz[(i-1)]*mxz
+df <- data.frame( Generation = seq( 0, N ),
+                  px = c( px, rep( NA, N ) ),
+                  py = c( py, rep( NA, N ) ),
+                  pz = c( pz, rep( NA, N ) ) )
+
+for( i in 2:nrow( df ) ) {
+  df$px[i] <- df$px[i - 1] * (1 - (mxy + mxz)) + df$py[i - 1] * mxy + df$pz[i - 1] * mxz
+  df$py[i] <- df$py[i - 1] * (1 - (mxy + myz)) + df$px[i - 1] * mxy + df$pz[i - 1] * myz
+  df$pz[i] <- df$pz[i - 1] * (1 - (mxz + myz)) + df$px[i - 1] * mxz + df$py[i - 1] * myz
 }
-```
 
-
-```{r}
-# plot the outcome
-
-ggplot( df ) + 
-  geom_line( aes(t,px ), color="green" ) + 
-  geom_line( aes(t,py ), color="blue" ) + 
-  geom_line( aes(t,pz ), color="red" ) + 
-  theme_minimal()
-  
-  
-```
-
-
-```{r}
-pivot_longer( df, cols=c(px,py,pz)) |>
-  ggplot( aes(t,value,color=name) ) + 
-  geom_line()  + 
+pivot_longer( df, cols = c( px, py, pz ), names_to = "Population", values_to = "Frequency" ) |>
+  ggplot( aes( Generation, Frequency, color = Population ) ) +
+  geom_line() +
   theme_minimal()
 ```
 
+With the original rates the three populations converge on the average of their starting frequencies, `r round( mean( c( px, py, pz ) ), 3 )`, within about 7 generations (every population within 0.01 of it).
 
-## Questions
-
-Use the code above and 
-
-1. What if $m_{y \leftrightarrow z}=0$, how does that change the trajectory in allele frequencies?
+## Question 1
 
 ```{r}
-# set myz=0, redo, and plot the allele frequencies for each population
+myz <- 0
+
+df1 <- data.frame( Generation = seq( 0, N ),
+                   px = c( px, rep( NA, N ) ),
+                   py = c( py, rep( NA, N ) ),
+                   pz = c( pz, rep( NA, N ) ) )
+
+for( i in 2:nrow( df1 ) ) {
+  df1$px[i] <- df1$px[i - 1] * (1 - (mxy + mxz)) + df1$py[i - 1] * mxy + df1$pz[i - 1] * mxz
+  df1$py[i] <- df1$py[i - 1] * (1 - (mxy + myz)) + df1$px[i - 1] * mxy + df1$pz[i - 1] * myz
+  df1$pz[i] <- df1$pz[i - 1] * (1 - (mxz + myz)) + df1$px[i - 1] * mxz + df1$py[i - 1] * myz
+}
+
+pivot_longer( df1, cols = c( px, py, pz ), names_to = "Population", values_to = "Frequency" ) |>
+  ggplot( aes( Generation, Frequency, color = Population ) ) +
+  geom_line() +
+  theme_minimal()
+
+tail( df1, 1 )
 ```
 
+`y` and `z` no longer exchange migrants directly, but both are still connected through `x`, and migration is still symmetric.  So the system ends up at the same place, the average of the starting frequencies (`r round( mean( c( px, py, pz ) ), 3 )`), but it takes about twice as long to get there (about 13 generations): `y` and `z` only converge on each other by way of `x`, and `y` now receives far fewer immigrants in total.
 
-2. Reset the connectivity from the last question to the original one and add a fourth population (`w`) to the model that is connected in a **one-way migration** from population `z` with a rate of $m_{z \rightarrow w} = 0.05$ and a starting allele frequency of 0.1.  Create a plot of allele frequencies through time with a sufficient number of generations to allow the system to reach allele frequency equilibrium.
+## Question 2
 
 ```{r}
-# add another population and plot allele frequencies.
+myz <- 0.3
+mzw <- 0.05
+pw <- 0.1
+N <- 200
+
+df2 <- data.frame( Generation = seq( 0, N ),
+                   px = c( px, rep( NA, N ) ),
+                   py = c( py, rep( NA, N ) ),
+                   pz = c( pz, rep( NA, N ) ),
+                   pw = c( pw, rep( NA, N ) ) )
+
+for( i in 2:nrow( df2 ) ) {
+  df2$px[i] <- df2$px[i - 1] * (1 - (mxy + mxz)) + df2$py[i - 1] * mxy + df2$pz[i - 1] * mxz
+  df2$py[i] <- df2$py[i - 1] * (1 - (mxy + myz)) + df2$px[i - 1] * mxy + df2$pz[i - 1] * myz
+  df2$pz[i] <- df2$pz[i - 1] * (1 - (mxz + myz)) + df2$px[i - 1] * mxz + df2$py[i - 1] * myz
+  df2$pw[i] <- df2$pw[i - 1] * (1 - mzw) + df2$pz[i - 1] * mzw
+}
+
+pivot_longer( df2, cols = c( px, py, pz, pw ), names_to = "Population", values_to = "Frequency" ) |>
+  ggplot( aes( Generation, Frequency, color = Population ) ) +
+  geom_line() +
+  theme_minimal()
+
+tail( df2, 1 )
 ```
 
+`z` does not receive anything back from `w`, so only `pw` gets a new term, and the equations for `x`, `y`, and `z` are unchanged.  At $m_{z \rightarrow w} = 0.05$, `w` closes only 5% of its remaining gap each generation and needs about 80 generations to get within 0.01 of its equilibrium, ten times longer than `x`, `y`, and `z` need.  Running 200 generations shows it clearly settled.
 
+## Question 3
 
-
-
-
+`w` ends up at `r round( mean( c( px, py, pz ) ), 3 )`, the equilibrium of the `x`–`y`–`z` system, and not at the average of all four starting frequencies (`r round( mean( c( px, py, pz, pw ) ), 3 )`).  Gene flow into `w` is one-way, like an island receiving migrants from a mainland, so the populations it receives migrants from set its equilibrium.  Adding `w` changes nothing for `x`, `y`, or `z`: emigration from `z` does not change `z`'s allele frequencies, and no migrants go back from `w`.

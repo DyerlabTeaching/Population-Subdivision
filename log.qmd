@@ -1,0 +1,7 @@
+---
+title: "Teaching Log"
+format: dyerlab-html
+---
+
+> Daily updates on progress for the course in each section.
+
