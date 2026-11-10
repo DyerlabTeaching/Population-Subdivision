@@ -13,6 +13,19 @@ In this activity we focus on:
 2. Predicting future allele frequencies, and
 3. Communicating those findings.
 
+::: {.callout-note}
+## From here on: documents that read like research
+
+Starting with this module, the homework you turn in hides its code. Its header adds
+
+```yaml
+execute:
+  echo: false
+```
+
+so the rendered page shows only your words, tables, figures, and inline values, the way a published paper would. The code still runs and is still in the file; the "</> Code" button lets me see all of it. This activity keeps its code visible because you work from it directly, but as you answer the questions, start writing the explanation so it stands on its own without the code beside it.
+:::
+
 ## Population Connectivity
 
 Consider the following connectivity graph of the three populations *x*, *y*, and *z*.
